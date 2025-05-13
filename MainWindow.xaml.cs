@@ -13,6 +13,7 @@ using DatabaseMigrationTool.Core.Services;
 using MaterialDesignThemes.Wpf;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using System.Collections.Generic;
 
 namespace DatabaseMigrationTool.WPF;
 
@@ -23,6 +24,9 @@ public partial class MainWindow : Window
 {
     private readonly IDatabaseMigrationService _migrationService;
     private readonly IProgress<MigrationProgress> _progress;
+    private readonly List<string> DbTypes = new List<string> { "MySQL", "SQL Server" };
+    private bool _isDbTypeSyncing = false;
+    private int _lastChangedCombo = 0; // 1=Source, 2=Target
 
     public MainWindow() : this(App.ServiceProvider.GetRequiredService<IDatabaseMigrationService>())
     {
@@ -33,6 +37,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         _migrationService = migrationService;
         _progress = new Progress<MigrationProgress>(UpdateProgress);
+
+        // 初始化数据库类型下拉框
+        InitDbTypeCombos();
 
         // 设置默认端口
         SourcePortTextBox.Text = "3306";
@@ -52,62 +59,91 @@ public partial class MainWindow : Window
         UpdateTargetAuthPanel();
     }
 
-    private void SourceDbType_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void InitDbTypeCombos()
     {
-        if (SourceDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
+        SourceDbTypeCombo.Items.Clear();
+        TargetDbTypeCombo.Items.Clear();
+        foreach (var type in DbTypes)
         {
-            SourcePortTextBox.Text = selectedItem.Content.ToString() == "MySQL" ? "3306" : "1433";
-            // 联动目标类型
-            if (selectedItem.Content.ToString() == "SQL Server")
-            {
-                if (TargetDbTypeCombo.SelectedIndex != 0)
-                    TargetDbTypeCombo.SelectedIndex = 0;
-            }
-            else if (selectedItem.Content.ToString() == "MySQL")
-            {
-                if (TargetDbTypeCombo.SelectedIndex != 1)
-                    TargetDbTypeCombo.SelectedIndex = 1;
-            }
-            // 验证方式联动
-            if (selectedItem.Content.ToString() == "MySQL")
-            {
-                SourceAuthTypeCombo.SelectedIndex = 1; // 账号密码
-                SourceAuthTypeCombo.IsEnabled = false;
-            }
-            else
-            {
-                SourceAuthTypeCombo.IsEnabled = true;
-            }
+            SourceDbTypeCombo.Items.Add(new ComboBoxItem { Content = type });
+            TargetDbTypeCombo.Items.Add(new ComboBoxItem { Content = type });
         }
+        SourceDbTypeCombo.SelectedIndex = 0;
+        TargetDbTypeCombo.SelectedIndex = 1;
     }
 
-    private void TargetDbType_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void SourceDbType_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (TargetDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
+        if (_isDbTypeSyncing) return;
+        _isDbTypeSyncing = true;
+
+        if (SourceDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
         {
-            TargetPortTextBox.Text = selectedItem.Content.ToString() == "MySQL" ? "3306" : "1433";
-            // 联动源类型
-            if (selectedItem.Content.ToString() == "SQL Server")
+            string dbType = selectedItem.Content.ToString();
+            SourcePortTextBox.Text = dbType == "MySQL" ? "3306" : "1433";
+            var oppositeType = dbType == "MySQL" ? "SQL Server" : "MySQL";
+            for (int i = 0; i < TargetDbTypeCombo.Items.Count; i++)
             {
-                if (SourceDbTypeCombo.SelectedIndex != 0)
-                    SourceDbTypeCombo.SelectedIndex = 0;
+                var item = TargetDbTypeCombo.Items[i] as ComboBoxItem;
+                if (item.Content.ToString() == oppositeType)
+                {
+                    TargetDbTypeCombo.SelectedIndex = i;
+                    break;
+                }
             }
-            else if (selectedItem.Content.ToString() == "MySQL")
+            // 控制控件显示
+            if (dbType == "MySQL")
             {
-                if (SourceDbTypeCombo.SelectedIndex != 1)
-                    SourceDbTypeCombo.SelectedIndex = 1;
+                SourceAuthTypeCombo.Visibility = Visibility.Collapsed;
+                SourceSqlAuthPanel.Visibility = Visibility.Visible;
+                SourceUserPassPanel.Visibility = Visibility.Visible;
+                SourceServerTextBox.Visibility = Visibility.Visible;
+                SourceDatabaseTextBox.Visibility = Visibility.Visible;
             }
-            // 验证方式联动
-            if (selectedItem.Content.ToString() == "MySQL")
+            else // SQL Server
             {
-                TargetAuthTypeCombo.SelectedIndex = 1; // 账号密码
-                TargetAuthTypeCombo.IsEnabled = false;
-            }
-            else
-            {
-                TargetAuthTypeCombo.IsEnabled = true;
+                SourceAuthTypeCombo.Visibility = Visibility.Visible;
+                UpdateSourceAuthPanel();
             }
         }
+        _isDbTypeSyncing = false;
+    }
+
+    private void TargetDbType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isDbTypeSyncing) return;
+        _isDbTypeSyncing = true;
+
+        if (TargetDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
+        {
+            string dbType = selectedItem.Content.ToString();
+            TargetPortTextBox.Text = dbType == "MySQL" ? "3306" : "1433";
+            var oppositeType = dbType == "MySQL" ? "SQL Server" : "MySQL";
+            for (int i = 0; i < SourceDbTypeCombo.Items.Count; i++)
+            {
+                var item = SourceDbTypeCombo.Items[i] as ComboBoxItem;
+                if (item.Content.ToString() == oppositeType)
+                {
+                    SourceDbTypeCombo.SelectedIndex = i;
+                    break;
+                }
+            }
+            // 控制控件显示
+            if (dbType == "MySQL")
+            {
+                TargetAuthTypeCombo.Visibility = Visibility.Collapsed;
+                TargetSqlAuthPanel.Visibility = Visibility.Visible;
+                TargetUserPassPanel.Visibility = Visibility.Visible;
+                TargetServerTextBox.Visibility = Visibility.Visible;
+                TargetDatabaseTextBox.Visibility = Visibility.Visible;
+            }
+            else // SQL Server
+            {
+                TargetAuthTypeCombo.Visibility = Visibility.Visible;
+                UpdateTargetAuthPanel();
+            }
+        }
+        _isDbTypeSyncing = false;
     }
 
     private void SourceAuthTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -122,6 +158,18 @@ public partial class MainWindow : Window
 
     private void UpdateSourceAuthPanel()
     {
+        if (SourceDbTypeCombo.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() == "MySQL")
+        {
+            // MySQL时不显示验证方式，显示所有输入项
+            SourceAuthTypeCombo.Visibility = Visibility.Collapsed;
+            SourceSqlAuthPanel.Visibility = Visibility.Visible;
+            SourceUserPassPanel.Visibility = Visibility.Visible;
+            SourceServerTextBox.Visibility = Visibility.Visible;
+            SourceDatabaseTextBox.Visibility = Visibility.Visible;
+            return;
+        }
+        // SQL Server
+        SourceAuthTypeCombo.Visibility = Visibility.Visible;
         if (SourceAuthTypeCombo.SelectedIndex == 0) // Windows身份验证
         {
             SourceSqlAuthPanel.Visibility = Visibility.Collapsed;
@@ -140,14 +188,26 @@ public partial class MainWindow : Window
 
     private void UpdateTargetAuthPanel()
     {
-        if (TargetAuthTypeCombo.SelectedIndex == 0)
+        if (TargetDbTypeCombo.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() == "MySQL")
+        {
+            // MySQL时不显示验证方式，显示所有输入项
+            TargetAuthTypeCombo.Visibility = Visibility.Collapsed;
+            TargetSqlAuthPanel.Visibility = Visibility.Visible;
+            TargetUserPassPanel.Visibility = Visibility.Visible;
+            TargetServerTextBox.Visibility = Visibility.Visible;
+            TargetDatabaseTextBox.Visibility = Visibility.Visible;
+            return;
+        }
+        // SQL Server
+        TargetAuthTypeCombo.Visibility = Visibility.Visible;
+        if (TargetAuthTypeCombo.SelectedIndex == 0) // Windows身份验证
         {
             TargetSqlAuthPanel.Visibility = Visibility.Collapsed;
             TargetUserPassPanel.Visibility = Visibility.Collapsed;
             TargetDatabaseTextBox.Visibility = Visibility.Visible;
             TargetServerTextBox.Visibility = Visibility.Visible;
         }
-        else
+        else // SQL Server身份验证
         {
             TargetSqlAuthPanel.Visibility = Visibility.Visible;
             TargetUserPassPanel.Visibility = Visibility.Visible;

@@ -45,10 +45,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <ComboBox x:Name="SourceDbTypeCombo" materialDesign:HintAssist.Hint="数据库类型" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="0" HorizontalAlignment="Stretch" SelectedIndex="0">
-                        <ComboBoxItem Content="MySQL"/>
-                        <ComboBoxItem Content="SQL Server"/>
-                    </ComboBox>
+                    <ComboBox x:Name="SourceDbTypeCombo" materialDesign:HintAssist.Hint="数据库类型" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="0" HorizontalAlignment="Stretch" SelectedIndex="0"/>
                     <ComboBox x:Name="SourceAuthTypeCombo" materialDesign:HintAssist.Hint="验证方式" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="1" HorizontalAlignment="Stretch" SelectedIndex="0">
                         <ComboBoxItem Content="Windows身份验证" />
                         <ComboBoxItem Content="SQL Server身份验证" />
@@ -90,10 +87,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <ComboBox x:Name="TargetDbTypeCombo" materialDesign:HintAssist.Hint="数据库类型" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="0" HorizontalAlignment="Stretch" SelectedIndex="0">
-                        <ComboBoxItem Content="MySQL"/>
-                        <ComboBoxItem Content="SQL Server"/>
-                    </ComboBox>
+                    <ComboBox x:Name="TargetDbTypeCombo" materialDesign:HintAssist.Hint="数据库类型" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="0" HorizontalAlignment="Stretch" SelectedIndex="0"/>
                     <ComboBox x:Name="TargetAuthTypeCombo" materialDesign:HintAssist.Hint="验证方式" Style="{StaticResource MaterialDesignOutlinedComboBox}" Margin="0,8" Grid.Row="1" HorizontalAlignment="Stretch" SelectedIndex="0">
                         <ComboBoxItem Content="Windows身份验证" />
                         <ComboBoxItem Content="SQL Server身份验证" />
