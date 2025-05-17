@@ -57,6 +57,7 @@ public partial class MainWindow : Window
         // 初始化显示
         UpdateSourceAuthPanel();
         UpdateTargetAuthPanel();
+        TargetDbType_SelectionChanged(TargetDbTypeCombo, null);
     }
 
     private void InitDbTypeCombos()
@@ -88,6 +89,11 @@ public partial class MainWindow : Window
                 if (item.Content.ToString() == oppositeType)
                 {
                     TargetDbTypeCombo.SelectedIndex = i;
+                    // 控制TargetAuthTypeCombo的显示
+                    TargetAuthTypeCombo.Visibility = Visibility.Collapsed;
+                    TargetAuthTypeCombo.Height = 0;
+                    TargetAuthTypeCombo.MinHeight = 0;
+                    TargetAuthTypeCombo.Margin = new Thickness(0);
                     break;
                 }
             }
@@ -95,14 +101,21 @@ public partial class MainWindow : Window
             if (dbType == "MySQL")
             {
                 SourceAuthTypeCombo.Visibility = Visibility.Collapsed;
-                SourceSqlAuthPanel.Visibility = Visibility.Visible;
-                SourceUserPassPanel.Visibility = Visibility.Visible;
+                SourceAuthTypeCombo.Height = 0;
+                SourceAuthTypeCombo.MinHeight = 0;
+                SourceAuthTypeCombo.Margin = new Thickness(0);
+                SourcePortTextBox.Visibility = Visibility.Visible;
+                SourceUsernameTextBox.Visibility = Visibility.Visible;
+                SourcePasswordBox.Visibility = Visibility.Visible;
                 SourceServerTextBox.Visibility = Visibility.Visible;
                 SourceDatabaseTextBox.Visibility = Visibility.Visible;
             }
             else // SQL Server
             {
                 SourceAuthTypeCombo.Visibility = Visibility.Visible;
+                SourceAuthTypeCombo.Height = double.NaN;
+                SourceAuthTypeCombo.MinHeight = 0;
+                SourceAuthTypeCombo.Margin = new Thickness(0,8,0,8);
                 UpdateSourceAuthPanel();
             }
         }
@@ -128,20 +141,22 @@ public partial class MainWindow : Window
                     break;
                 }
             }
-            // 控制控件显示
+            // 控制TargetAuthTypeCombo的显示/隐藏
             if (dbType == "MySQL")
             {
                 TargetAuthTypeCombo.Visibility = Visibility.Collapsed;
-                TargetSqlAuthPanel.Visibility = Visibility.Visible;
-                TargetUserPassPanel.Visibility = Visibility.Visible;
-                TargetServerTextBox.Visibility = Visibility.Visible;
-                TargetDatabaseTextBox.Visibility = Visibility.Visible;
+                TargetAuthTypeCombo.Height = 0;
+                TargetAuthTypeCombo.MinHeight = 0;
+                TargetAuthTypeCombo.Margin = new Thickness(0);
             }
-            else // SQL Server
+            else
             {
                 TargetAuthTypeCombo.Visibility = Visibility.Visible;
-                UpdateTargetAuthPanel();
+                TargetAuthTypeCombo.Height = double.NaN;
+                TargetAuthTypeCombo.MinHeight = 0;
+                TargetAuthTypeCombo.Margin = new Thickness(0, 8, 0, 8);
             }
+            UpdateTargetAuthPanel();
         }
         _isDbTypeSyncing = false;
     }
@@ -160,27 +175,34 @@ public partial class MainWindow : Window
     {
         if (SourceDbTypeCombo.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() == "MySQL")
         {
-            // MySQL时不显示验证方式，显示所有输入项
             SourceAuthTypeCombo.Visibility = Visibility.Collapsed;
-            SourceSqlAuthPanel.Visibility = Visibility.Visible;
-            SourceUserPassPanel.Visibility = Visibility.Visible;
+            SourceAuthTypeCombo.Height = 0;
+            SourceAuthTypeCombo.MinHeight = 0;
+            SourceAuthTypeCombo.Margin = new Thickness(0);
+            SourcePortTextBox.Visibility = Visibility.Visible;
+            SourceUsernameTextBox.Visibility = Visibility.Visible;
+            SourcePasswordBox.Visibility = Visibility.Visible;
             SourceServerTextBox.Visibility = Visibility.Visible;
             SourceDatabaseTextBox.Visibility = Visibility.Visible;
             return;
         }
-        // SQL Server
         SourceAuthTypeCombo.Visibility = Visibility.Visible;
+        SourceAuthTypeCombo.Height = double.NaN;
+        SourceAuthTypeCombo.MinHeight = 0;
+        SourceAuthTypeCombo.Margin = new Thickness(0,8,0,8);
         if (SourceAuthTypeCombo.SelectedIndex == 0) // Windows身份验证
         {
-            SourceSqlAuthPanel.Visibility = Visibility.Collapsed;
-            SourceUserPassPanel.Visibility = Visibility.Collapsed;
+            SourcePortTextBox.Visibility = Visibility.Collapsed;
+            SourceUsernameTextBox.Visibility = Visibility.Collapsed;
+            SourcePasswordBox.Visibility = Visibility.Collapsed;
             SourceDatabaseTextBox.Visibility = Visibility.Visible;
             SourceServerTextBox.Visibility = Visibility.Visible;
         }
         else // SQL Server身份验证
         {
-            SourceSqlAuthPanel.Visibility = Visibility.Visible;
-            SourceUserPassPanel.Visibility = Visibility.Visible;
+            SourcePortTextBox.Visibility = Visibility.Visible;
+            SourceUsernameTextBox.Visibility = Visibility.Visible;
+            SourcePasswordBox.Visibility = Visibility.Visible;
             SourceDatabaseTextBox.Visibility = Visibility.Visible;
             SourceServerTextBox.Visibility = Visibility.Visible;
         }
@@ -190,27 +212,26 @@ public partial class MainWindow : Window
     {
         if (TargetDbTypeCombo.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() == "MySQL")
         {
-            // MySQL时不显示验证方式，显示所有输入项
-            TargetAuthTypeCombo.Visibility = Visibility.Collapsed;
-            TargetSqlAuthPanel.Visibility = Visibility.Visible;
-            TargetUserPassPanel.Visibility = Visibility.Visible;
+            TargetPortTextBox.Visibility = Visibility.Visible;
+            TargetUsernameTextBox.Visibility = Visibility.Visible;
+            TargetPasswordBox.Visibility = Visibility.Visible;
             TargetServerTextBox.Visibility = Visibility.Visible;
             TargetDatabaseTextBox.Visibility = Visibility.Visible;
             return;
         }
-        // SQL Server
-        TargetAuthTypeCombo.Visibility = Visibility.Visible;
         if (TargetAuthTypeCombo.SelectedIndex == 0) // Windows身份验证
         {
-            TargetSqlAuthPanel.Visibility = Visibility.Collapsed;
-            TargetUserPassPanel.Visibility = Visibility.Collapsed;
+            TargetPortTextBox.Visibility = Visibility.Collapsed;
+            TargetUsernameTextBox.Visibility = Visibility.Collapsed;
+            TargetPasswordBox.Visibility = Visibility.Collapsed;
             TargetDatabaseTextBox.Visibility = Visibility.Visible;
             TargetServerTextBox.Visibility = Visibility.Visible;
         }
         else // SQL Server身份验证
         {
-            TargetSqlAuthPanel.Visibility = Visibility.Visible;
-            TargetUserPassPanel.Visibility = Visibility.Visible;
+            TargetPortTextBox.Visibility = Visibility.Visible;
+            TargetUsernameTextBox.Visibility = Visibility.Visible;
+            TargetPasswordBox.Visibility = Visibility.Visible;
             TargetDatabaseTextBox.Visibility = Visibility.Visible;
             TargetServerTextBox.Visibility = Visibility.Visible;
         }
