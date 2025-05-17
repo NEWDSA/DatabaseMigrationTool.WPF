@@ -219,22 +219,12 @@ public partial class MainWindow : Window
             TargetDatabaseTextBox.Visibility = Visibility.Visible;
             return;
         }
-        if (TargetAuthTypeCombo.SelectedIndex == 0) // Windows身份验证
-        {
-            TargetPortTextBox.Visibility = Visibility.Collapsed;
-            TargetUsernameTextBox.Visibility = Visibility.Collapsed;
-            TargetPasswordBox.Visibility = Visibility.Collapsed;
-            TargetDatabaseTextBox.Visibility = Visibility.Visible;
-            TargetServerTextBox.Visibility = Visibility.Visible;
-        }
-        else // SQL Server身份验证
-        {
-            TargetPortTextBox.Visibility = Visibility.Visible;
-            TargetUsernameTextBox.Visibility = Visibility.Visible;
-            TargetPasswordBox.Visibility = Visibility.Visible;
-            TargetDatabaseTextBox.Visibility = Visibility.Visible;
-            TargetServerTextBox.Visibility = Visibility.Visible;
-        }
+        // SQL Server时，用户名和密码也应可见
+        TargetPortTextBox.Visibility = Visibility.Visible;
+        TargetUsernameTextBox.Visibility = Visibility.Visible;
+        TargetPasswordBox.Visibility = Visibility.Visible;
+        TargetServerTextBox.Visibility = Visibility.Visible;
+        TargetDatabaseTextBox.Visibility = Visibility.Visible;
     }
 
     private async void TestSourceConnection_Click(object sender, RoutedEventArgs e)
