@@ -64,8 +64,10 @@
             <StackPanel Grid.Column="1" 
                         VerticalAlignment="Center" 
                         Margin="8">
-                <Button Style="{StaticResource MaterialDesignIconButton}"
-                        Margin="0,8">
+                <Button x:Name="ArrowMigrateButton"
+                        Style="{StaticResource MaterialDesignIconButton}"
+                        Margin="0,8"
+                        Click="ArrowMigrateButton_Click">
                     <materialDesign:PackIcon Kind="ArrowRight" 
                                            Height="24" 
                                            Width="24"/>

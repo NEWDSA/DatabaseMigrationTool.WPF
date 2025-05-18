@@ -37,14 +37,11 @@ public partial class MainWindow : Window
         InitializeComponent();
         _migrationService = migrationService;
         _progress = new Progress<MigrationProgress>(UpdateProgress);
-
         // 初始化数据库类型下拉框
         InitDbTypeCombos();
-
         // 设置默认端口
         SourcePortTextBox.Text = "3306";
         TargetPortTextBox.Text = "1433";
-
         // 绑定事件处理程序
         TestSourceConnectionButton.Click += TestSourceConnection_Click;
         TestTargetConnectionButton.Click += TestTargetConnection_Click;
@@ -53,11 +50,9 @@ public partial class MainWindow : Window
         TargetDbTypeCombo.SelectionChanged += TargetDbType_SelectionChanged;
         SourceAuthTypeCombo.SelectionChanged += SourceAuthTypeCombo_SelectionChanged;
         TargetAuthTypeCombo.SelectionChanged += TargetAuthTypeCombo_SelectionChanged;
-
         // 初始化显示
         UpdateSourceAuthPanel();
         UpdateTargetAuthPanel();
-        TargetDbType_SelectionChanged(TargetDbTypeCombo, null);
     }
 
     private void InitDbTypeCombos()
@@ -71,6 +66,9 @@ public partial class MainWindow : Window
         }
         SourceDbTypeCombo.SelectedIndex = 0;
         TargetDbTypeCombo.SelectedIndex = 1;
+        // 主动触发一次SelectionChanged，确保控件状态和数据同步
+        SourceDbType_SelectionChanged(SourceDbTypeCombo, null);
+        TargetDbType_SelectionChanged(TargetDbTypeCombo, null);
     }
 
     private void SourceDbType_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -81,6 +79,7 @@ public partial class MainWindow : Window
         if (SourceDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
         {
             string dbType = selectedItem.Content.ToString();
+            // 每次切换类型都重置端口
             SourcePortTextBox.Text = dbType == "MySQL" ? "3306" : "1433";
             var oppositeType = dbType == "MySQL" ? "SQL Server" : "MySQL";
             for (int i = 0; i < TargetDbTypeCombo.Items.Count; i++)
@@ -97,7 +96,7 @@ public partial class MainWindow : Window
                     break;
                 }
             }
-            // 控制控件显示
+            // 控制控件显示，但不重置输入框内容
             if (dbType == "MySQL")
             {
                 SourceAuthTypeCombo.Visibility = Visibility.Collapsed;
@@ -130,6 +129,7 @@ public partial class MainWindow : Window
         if (TargetDbTypeCombo.SelectedItem is ComboBoxItem selectedItem)
         {
             string dbType = selectedItem.Content.ToString();
+            // 每次切换类型都重置端口
             TargetPortTextBox.Text = dbType == "MySQL" ? "3306" : "1433";
             var oppositeType = dbType == "MySQL" ? "SQL Server" : "MySQL";
             for (int i = 0; i < SourceDbTypeCombo.Items.Count; i++)
@@ -148,6 +148,14 @@ public partial class MainWindow : Window
                 TargetAuthTypeCombo.Height = 0;
                 TargetAuthTypeCombo.MinHeight = 0;
                 TargetAuthTypeCombo.Margin = new Thickness(0);
+                // MySQL不支持集成安全，强制设为False
+                if (TargetAuthTypeCombo is ComboBox combo)
+                {
+                    combo.SelectedIndex = 1; // 1为SQL Server身份认证
+                }
+                // 用户名密码控件可见
+                TargetUsernameTextBox.Visibility = Visibility.Visible;
+                TargetPasswordBox.Visibility = Visibility.Visible;
             }
             else
             {
@@ -163,11 +171,23 @@ public partial class MainWindow : Window
 
     private void SourceAuthTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // 切换到Windows身份认证时自动清空用户名和密码
+        if (SourceAuthTypeCombo.SelectedIndex == 0)
+        {
+            SourceUsernameTextBox.Text = string.Empty;
+            SourcePasswordBox.Password = string.Empty;
+        }
         UpdateSourceAuthPanel();
     }
 
     private void TargetAuthTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // 切换到Windows身份认证时自动清空用户名和密码
+        if (TargetAuthTypeCombo.SelectedIndex == 0)
+        {
+            TargetUsernameTextBox.Text = string.Empty;
+            TargetPasswordBox.Password = string.Empty;
+        }
         UpdateTargetAuthPanel();
     }
 
@@ -229,6 +249,7 @@ public partial class MainWindow : Window
 
     private async void TestSourceConnection_Click(object sender, RoutedEventArgs e)
     {
+        FocusManager.SetFocusedElement(this, (IInputElement)this); // 让窗口获得焦点，确保输入框值刷新
         // 必填项校验
         if (SourceDbTypeCombo.SelectedItem == null || string.IsNullOrWhiteSpace(SourceServerTextBox.Text) || string.IsNullOrWhiteSpace(SourceDatabaseTextBox.Text))
         {
@@ -238,8 +259,10 @@ public partial class MainWindow : Window
         try
         {
             var config = GetSourceConnectionConfig();
+            // 弹窗显示连接信息
+            MessageBox.Show($"类型: {config.DatabaseType}\n服务器: {config.Server}\n端口: {config.Port}\n库名: {config.DatabaseName}\n用户名: {config.Username}\n集成安全: {config.IntegratedSecurity}", "源数据库连接信息", MessageBoxButton.OK, MessageBoxImage.Information);
             var result = await _migrationService.TestConnectionAsync(config);
-            
+            AppendLog("TestConnectionAsync返回：" + result, Colors.Blue);
             if (result)
             {
                 AppendLog("源数据库连接测试成功！", Colors.Green);
@@ -266,6 +289,8 @@ public partial class MainWindow : Window
         try
         {
             var config = GetTargetConnectionConfig();
+            // 弹窗显示连接信息
+            MessageBox.Show($"类型: {config.DatabaseType}\n服务器: {config.Server}\n端口: {config.Port}\n库名: {config.DatabaseName}\n用户名: {config.Username}\n集成安全: {config.IntegratedSecurity}", "目标数据库连接信息", MessageBoxButton.OK, MessageBoxImage.Information);
             var result = await _migrationService.TestConnectionAsync(config);
             
             if (result)
@@ -343,6 +368,55 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void ArrowMigrateButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var config = new MigrationConfig
+            {
+                SourceConfig = GetSourceConnectionConfig(),
+                TargetConfig = GetTargetConnectionConfig(),
+                IncludeData = IncludeDataCheck.IsChecked ?? true,
+                IncludeIndexes = IncludeIndexesCheck.IsChecked ?? true,
+                IncludeConstraints = IncludeConstraintsCheck.IsChecked ?? true,
+                IncludeTriggers = IncludeTriggersCheck.IsChecked ?? true,
+                IncludeStoredProcedures = IncludeStoredProceduresCheck.IsChecked ?? true,
+                IncludeFunctions = IncludeFunctionsCheck.IsChecked ?? true,
+                IncludeViews = IncludeViewsCheck.IsChecked ?? true
+            };
+
+            ArrowMigrateButton.IsEnabled = false;
+            AppendLog("开始迁移...", Colors.Blue);
+
+            var result = await _migrationService.MigrateAsync(config, _progress);
+
+            if (result.Success)
+            {
+                AppendLog("迁移完成！", Colors.Green);
+                foreach (var warning in result.Warnings)
+                {
+                    AppendLog($"警告：{warning}", Colors.Orange);
+                }
+            }
+            else
+            {
+                AppendLog("迁移失败！", Colors.Red);
+                foreach (var error in result.Errors)
+                {
+                    AppendLog($"错误：{error}", Colors.Red);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"迁移过程出错：{ex.Message}", Colors.Red);
+        }
+        finally
+        {
+            ArrowMigrateButton.IsEnabled = true;
+        }
+    }
+
     private void UpdateProgress(MigrationProgress progress)
     {
         Dispatcher.Invoke(() =>
@@ -377,11 +451,19 @@ public partial class MainWindow : Window
     {
         var dbType = ((ComboBoxItem)SourceDbTypeCombo.SelectedItem).Content.ToString()?.ToLower() ?? "mysql";
         bool integratedSecurity = SourceAuthTypeCombo.SelectedIndex == 0;
+        int port = 0;
+        if (dbType == "mysql")
+        {
+            port = GetPort(dbType, SourcePortTextBox.Text, false);
+            integratedSecurity = false;
+
+        }
+        // SQL Server类型时port始终为0，由后端拼接Server,Port
         return new DatabaseConnectionConfig
         {
             DatabaseType = dbType,
             Server = SourceServerTextBox.Text,
-            Port = integratedSecurity ? 0 : GetPort(dbType, SourcePortTextBox.Text, false),
+            Port = port,
             DatabaseName = SourceDatabaseTextBox.Text,
             Username = integratedSecurity ? string.Empty : SourceUsernameTextBox.Text,
             Password = integratedSecurity ? string.Empty : SourcePasswordBox.Password,
@@ -392,7 +474,14 @@ public partial class MainWindow : Window
     private DatabaseConnectionConfig GetTargetConnectionConfig()
     {
         var dbType = ((ComboBoxItem)TargetDbTypeCombo.SelectedItem).Content.ToString()?.ToLower() ?? "mysql";
-        bool integratedSecurity = TargetAuthTypeCombo.SelectedIndex == 0;
+        // MySQL类型时集成安全始终为false
+        bool integratedSecurity = dbType == "mysql" ? false : TargetAuthTypeCombo.SelectedIndex == 0;
+        int port = 0;
+        if (dbType == "mysql")
+        {
+            port = GetPort(dbType, TargetPortTextBox.Text, false);
+            integratedSecurity = false;
+        }
         string dbName = string.IsNullOrWhiteSpace(TargetDatabaseTextBox.Text)
             ? SourceDatabaseTextBox.Text
             : TargetDatabaseTextBox.Text;
@@ -400,7 +489,7 @@ public partial class MainWindow : Window
         {
             DatabaseType = dbType,
             Server = TargetServerTextBox.Text,
-            Port = integratedSecurity ? 0 : GetPort(dbType, TargetPortTextBox.Text, false),
+            Port = port,
             DatabaseName = dbName,
             Username = integratedSecurity ? string.Empty : TargetUsernameTextBox.Text,
             Password = integratedSecurity ? string.Empty : TargetPasswordBox.Password,
